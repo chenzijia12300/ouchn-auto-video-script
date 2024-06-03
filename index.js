@@ -12,32 +12,31 @@
 
 (function() {
 
-    // 页面加载完成执行绑定
-    $(function () {
-        setTimeout(function (){
-            const activity = document.getElementsByClassName("learning-activity ng-scope")
-            for (const element of activity) {
-                let id =  extractNumber(element.id)
-                let activityValue = element.getElementsByClassName("attribute-value number ng-binding")
-                console.log(activityValue)
-                if (activityValue.length>0) {
-                    let activityTimeStr = activityValue[0].textContent
-                    let time = timeStringToSeconds(activityTimeStr);
-                    let operationElement = element.getElementsByClassName("activity-operations-container")[0];
-                    let btnHtml = '<span id="auto-button" class="button button-green small gtm-label" style="font-size: 12px; width: 58px; margin-left: 4px;" data-activity-id="'+id+'" data-time="'+time+'">直接挂机</span>';
-                    $(element).before(btnHtml)
-                    console.log("课程id:",id,"时间:",time);
-                }
-            }
-            $(document).on('click', '#auto-button', function () {
-                console.log(this.dataset)
-                requestActivitiesRead(this.dataset.activityId,this.dataset.time)
-            });
-        },5000)
-
+    $(document).on('click', '#auto-button', function () {
+        var $this = $(this);
+        requestActivitiesRead(this.dataset.activityId,this.dataset.time,$this)
     });
-
-    function requestActivitiesRead(id,end){
+    setInterval(function (){
+        const activity = document.getElementsByClassName("learning-activity ng-scope")
+        for (const element of activity) {
+            let autoButton = element.getElementsByClassName("auto-button");
+            if (autoButton && autoButton.length>0) {
+                continue
+            }
+            let id =  extractNumber(element.id)
+            let activityValue = element.getElementsByClassName("attribute-value number ng-binding")
+            if (activityValue.length>0) {
+                let completeness = element.getElementsByClassName("completeness full");
+                let activityTimeStr = activityValue[0].textContent
+                let time = timeStringToSeconds(activityTimeStr);
+                let buttonText = completeness && completeness.length>0?"已完成":"点击挂机"
+                let btnHtml = '<span id="auto-button" class="button button-green small gtm-label auto-button" style="font-size: 12px; width: 58px; margin-left: 4px;" data-activity-id="'+id+'" data-time="'+time+'">'+buttonText+'</span>';
+                $(element).prepend(btnHtml)
+                console.log("课程id:",id,"时间:",time);
+            }
+        }
+    },500)
+    function requestActivitiesRead(id,end,$this){
         $.ajax({
             type: "POST",
             url: "https://lms.ouchn.cn/api/course/activities-read/"+id,
@@ -48,6 +47,9 @@
             }),
             success: function (response) {
                 console.log('响应结果',response);
+                if (response.completeness=="full"){
+                    $this.text('已完成');
+                }
             }
         });
     }
